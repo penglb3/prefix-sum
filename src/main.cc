@@ -2,7 +2,8 @@
 #include <algorithm>
 #include <cstdio>
 #include <omp.h>
-
+#include <vector>
+using std::vector;
 int error_position(const int *arr, const int *sum, int n) {
   int s = 0;
   for (int i = 0; i < n; i++) {
@@ -16,14 +17,11 @@ int error_position(const int *arr, const int *sum, int n) {
 };
 
 int main(int argc, char *argv[]) {
-  const int size = 1100000000;
-  int *a = new int[size];
-  int *c = new int[size];
-  for (int i = 0; i < size; i++) {
-    a[i] = 1;
-  }
-  int ok = cuda_wrapper(a, c, size);
+  int size = 2048;
+  vector<int> a(size, 1);
+  vector<int> c(size, 0);
+  int ok = cuda_wrapper(a.data(), c.data(), size);
   printf("Run OK? %d\n", ok == 0);
-  printf("First error pos = %d\n", error_position(a, c, size));
+  printf("First error pos = %d\n", error_position(a.data(), c.data(), size));
   return 0;
 }
