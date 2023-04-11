@@ -17,7 +17,7 @@ int error_position(const int *arr, const int *sum, int n) {
 };
 
 int main(int argc, char *argv[]) {
-  int size = 2048;
+  int size = 1024 * 1024 * 64;
   vector<int> a(size, 1);
   vector<int> c(size, 0);
   int ok = cuda_wrapper(a.data(), c.data(), size);
