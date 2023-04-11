@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   int size = 1024 * 1024 * 64;
   vector<int> a(size, 1);
   vector<int> c(size, 0);
-  int ok = cuda_wrapper(a.data(), c.data(), size);
+  int ok = cuda_wrapper(a.data(), c.data(), size, EFFICIENT);
   printf("Run OK? %d\n", ok == 0);
   printf("First error pos = %d\n", error_position(a.data(), c.data(), size));
   return 0;

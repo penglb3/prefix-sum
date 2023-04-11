@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
-#include <stdint.h>
 #include <vector>
 
 /* ***********************************
@@ -127,10 +126,13 @@ inline uint64_t div_up(const uint64_t n, const uint64_t block_size) {
   return (n + block_size - 1) / block_size;
 }
 
-int cuda_wrapper(const int *arr, int *result, const int n) {
+void (*algos[])(int *, uint32_t) = {scan_block, sum_block_efficient};
+const int unit_block_p[] = {1, 2};
+
+int cuda_wrapper(const int *arr, int *result, const int n, uint8_t type) {
   const int block_size = 1024;
-  const int p = 1;
-  void (*sum_block)(int *, uint32_t) = scan_block;
+  const int p = unit_block_p[type];
+  void (*sum_block)(int *, uint32_t) = algos[type];
   int unit_size = block_size * p;
   int *arr_d, *sec_sums_d;
   uint64_t n_bytes = n * sizeof(int);

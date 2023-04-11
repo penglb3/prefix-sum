@@ -1,8 +1,11 @@
 #include <chrono>
 #include <cstdint>
 
-int cuda_wrapper(const int *arr, int *result, int n_elems);
-int omp_wrapper(const int *arr, int *result, int n_elems);
+enum { SCAN, EFFICIENT };
+
+int cuda_wrapper(const int *arr, int *result, int n_elems, uint8_t type = SCAN);
+int omp_wrapper(const int *arr, int *result, int n_elems,
+                uint8_t type = EFFICIENT);
 
 using time_point_t = std::chrono::steady_clock::time_point;
 
