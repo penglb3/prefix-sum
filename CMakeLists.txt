@@ -43,7 +43,7 @@ endif()
 
 if(OpenMP_FOUND)
   if (NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp -mavx2")
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp")
   endif()
@@ -62,7 +62,7 @@ set(PS_HEADERS
 
 set(PS_SOURCES
   src/cuda.cu
-  src/omp.cc
+  src/cpu.cc
 )
 
 include_directories(src)
