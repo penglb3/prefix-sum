@@ -6,21 +6,44 @@
 #include <immintrin.h> // avx
 #include <omp.h>
 
-// TODO(PLB): Parallize this
 void scan(int *A, const int n) {
   for (int s = 1; s < n; s <<= 1) {
-    int tmp;
+#ifndef SCAN_MULTITHREADING
     __m256i a_i, a_i_s;
+    int i;
+    // Ensure 32-alignment for AVX load/stores
+    for (i = n - 1; i >= (n & ~7); i--) {
+      A[i] += A[i - s];
+    }
     // OpenMP won't provide any sync within a loop, so this has to be sequential
-    for (int i = n - 8; i >= s; i -= 8) {
+    for (i -= 7; i >= s; i -= 8) {
       a_i = _mm256_load_si256((__m256i *)(A + i));
       a_i_s = _mm256_load_si256((__m256i *)(A + i - s));
       a_i = _mm256_add_epi32(a_i, a_i_s);
       _mm256_store_si256((__m256i *)(A + i), a_i);
     }
-    for (int i = s + (n - s) % 8 - 1; i >= s; i--) {
+    for (i += 7; i >= s; i--) {
       A[i] += A[i - s];
     }
+#else // Correct multithreaded version, but performance SUCKS
+    int T = num_omp_threads;
+    std::vector<__m256i> a_i(T), a_i_s(T);
+    for (int i = n - 8 * T; i >= s; i -= 8 * T) {
+      // #pragma omp parallel for
+      for (int j = 0; j < T; j++) {
+        a_i[j] = _mm256_loadu_si256((__m256i *)(A + i + 8 * j));
+        a_i_s[j] = _mm256_loadu_si256((__m256i *)(A + i + 8 * j - s));
+      }
+      // #pragma omp parallel for
+      for (int j = 0; j < T; j++) {
+        a_i[j] = _mm256_add_epi32(a_i[j], a_i_s[j]);
+        _mm256_storeu_si256((__m256i *)(A + i + 8 * j), a_i[j]);
+      }
+    }
+    for (int i = s + (n - s) % (8 * T) - 1; i >= s; i--) {
+      A[i] += A[i - s];
+    }
+#endif
   }
 }
 
@@ -52,19 +75,30 @@ void block(int *A, const int n) {
                           std::min(block_len, n - block_len * t));
   }
   for (int t = 1; t < num_omp_threads; t++) {
+#ifndef BLOCK_SIMD
 #pragma omp parallel for num_threads(num_omp_threads)
     for (int i = 0; i < std::min(block_len, n - block_len * t); i++) {
       A[block_len * t + i] += A[block_len * t - 1];
     }
+#else // Below is SIMD version of the above loop, but it performs worse.
+    __m256i a_i, a_i_s = _mm256_set1_epi32(A[block_len * t - 1]);
+    int blk_len = std::min(block_len, n - block_len * t);
+#pragma omp parallel for num_threads(num_omp_threads)
+    for (int i = 0; i < (blk_len & ~7); i += 8) {
+      a_i = _mm256_load_si256((__m256i *)(A + i + block_len * t));
+      a_i = _mm256_add_epi32(a_i, a_i_s);
+      _mm256_store_si256((__m256i *)(A + i + block_len * t), a_i);
+    }
+    for (int i = blk_len & ~7; i < blk_len; i++) {
+      A[i + t * block_len] += A[block_len * t - 1];
+    }
+#endif
   }
 }
 
 const sum_func_t ALGOS[] = {scan, sum_efficient, sequential_prefix_sum, block};
 
 int cpu_wrapper(const int *arr, int *result, int n_elems, uint8_t type) {
-  if (num_omp_threads == 0) {
-    num_omp_threads = omp_get_max_threads();
-  }
   memcpy(result, arr, n_elems * sizeof(int));
   time_point_t time = std::chrono::high_resolution_clock::now();
   ALGOS[type](result, n_elems);

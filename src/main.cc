@@ -49,7 +49,11 @@ private:
 };
 
 using wrapper_t = std::function<int(const int *, int *, int, uint8_t)>;
+#ifndef CPU_ONLY
 const wrapper_t WRAPPER[] = {cpu_wrapper, cuda_wrapper};
+#else
+const wrapper_t WRAPPER[] = {cpu_wrapper};
+#endif
 
 using std::string;
 int main(int argc, const char *argv[]) {
@@ -75,6 +79,8 @@ int main(int argc, const char *argv[]) {
   if (!arg.empty()) {
     num_omp_threads = atoi(arg.c_str());
     printf("#Thread = %d\n", num_omp_threads);
+  } else {
+    num_omp_threads = omp_get_max_threads();
   }
   printf("Running %s algorithm on %s, size = %d\n", ALGO_NAMES[algo].c_str(),
          DEVICE_NAMES[device].c_str(), size);

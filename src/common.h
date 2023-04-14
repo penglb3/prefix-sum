@@ -1,6 +1,7 @@
 #include <chrono>
 #include <cstdint>
 #include <vector>
+#include <string>
 
 enum { SCAN, EFFICIENT, SEQ, BLOCK_SEQ };
 const std::vector<std::string> ALGO_NAMES = {"scan", "efficient", "seq", "block"};
