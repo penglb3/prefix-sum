@@ -56,41 +56,47 @@ const wrapper_t WRAPPER[] = {cpu_wrapper};
 #endif
 
 using std::string;
+
+void get_param(InputParser &parser, const char *opt, int &arg,
+               vector<string> viable_values = {}) {
+  string args = parser.get_option(opt);
+  if (viable_values.empty()) {
+    if (!args.empty()) {
+      arg = atoi(args.c_str());
+    }
+  } else {
+    for (int i = 0; i < viable_values.size(); i++) {
+      if (args == viable_values[i]) {
+        arg = i;
+      }
+    }
+  }
+}
+
 int main(int argc, const char *argv[]) {
   InputParser parser(argc, argv);
-  int size = 1024 * 4, device = CPU, algo = SCAN;
-  string arg = parser.get_option("-s");
-  if (!arg.empty()) {
-    size = atoi(arg.c_str());
-  }
-  arg = parser.get_option("-d");
-  for (int i = 0; i < DEVICE_NAMES.size(); i++) {
-    if (arg == DEVICE_NAMES[i]) {
-      device = i;
-    }
-  }
-  arg = parser.get_option("-a");
-  for (int i = 0; i < ALGO_NAMES.size(); i++) {
-    if (arg == ALGO_NAMES[i]) {
-      algo = i;
-    }
-  }
-  arg = parser.get_option("-t");
-  if (!arg.empty()) {
-    num_omp_threads = atoi(arg.c_str());
-    printf("#Thread = %d\n", num_omp_threads);
-  } else {
-    num_omp_threads = omp_get_max_threads();
-  }
+  int size = 1024 * 4, device = CPU, algo = SCAN, repeat = 1;
+  get_param(parser, "-n", size);
+  get_param(parser, "-r", repeat);
+  get_param(parser, "-d", device, DEVICE_NAMES);
+  get_param(parser, "-a", algo, ALGO_NAMES);
+  num_omp_threads = omp_get_max_threads();
+  get_param(parser, "-t", num_omp_threads);
+
   printf("Running %s algorithm on %s, size = %d\n", ALGO_NAMES[algo].c_str(),
          DEVICE_NAMES[device].c_str(), size);
   vector<int> a(size, 1);
   vector<int> c(size, 0);
-  printf("Computation start\n");
+  // Warm up! Especially important for cuda.
+  WRAPPER[device](a.data(), c.data(), size, algo);
+  printf("Warm up done. Test start.\n");
+  float time_ms;
   time_point_t time = std::chrono::high_resolution_clock::now();
-  int ok = WRAPPER[device](a.data(), c.data(), size, algo);
-  float time_ms = chrono_event_tick(time);
-  printf("End to end latency: %.3f ms\n", time_ms);
+  for (int i = 0; i < repeat; i++) {
+    WRAPPER[device](a.data(), c.data(), size, algo);
+    time_ms = chrono_event_tick(time);
+    printf("[#%d] End to end latency: %.3f ms\n", i + 1, time_ms);
+  }
   printf("First error pos = %d\n", error_position(a.data(), c.data(), size));
   return 0;
 }

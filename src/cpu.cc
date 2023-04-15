@@ -29,12 +29,12 @@ void scan(int *A, const int n) {
     int T = num_omp_threads;
     std::vector<__m256i> a_i(T), a_i_s(T);
     for (int i = n - 8 * T; i >= s; i -= 8 * T) {
-      // #pragma omp parallel for
+#pragma omp parallel for schedule(static) num_threads(T)
       for (int j = 0; j < T; j++) {
         a_i[j] = _mm256_loadu_si256((__m256i *)(A + i + 8 * j));
         a_i_s[j] = _mm256_loadu_si256((__m256i *)(A + i + 8 * j - s));
       }
-      // #pragma omp parallel for
+#pragma omp parallel for schedule(static) num_threads(T)
       for (int j = 0; j < T; j++) {
         a_i[j] = _mm256_add_epi32(a_i[j], a_i_s[j]);
         _mm256_storeu_si256((__m256i *)(A + i + 8 * j), a_i[j]);
