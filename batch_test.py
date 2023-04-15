@@ -16,7 +16,7 @@ def box(data):
     # whiskerBottom = boxBottom - 1.5*IQR
     return med, boxTop, boxBottom, whiskerTop, whiskerBottom
 
-def save(algo_setting, n_elems, n_threads, data):
+def save(algo_setting, n_elem, n_threads, data):
     filename = os.path.join(DIR_TO_SAVE, f'{algo_setting}-{n_elem}-{n_threads}.txt')
     with open(filename, 'a') as f:
         f.write(data)
