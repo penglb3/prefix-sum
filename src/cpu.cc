@@ -102,6 +102,6 @@ int cpu_wrapper(const int *arr, int *result, int n_elems, uint8_t type) {
   memcpy(result, arr, n_elems * sizeof(int));
   time_point_t time = std::chrono::high_resolution_clock::now();
   ALGOS[type](result, n_elems);
-  printf("%.3f ms\n", chrono_event_tick(time));
+  printf("[C] %.3f ms\n", chrono_event_tick(time));
   return 0;
 }

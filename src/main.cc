@@ -88,14 +88,13 @@ int main(int argc, const char *argv[]) {
   vector<int> a(size, 1);
   vector<int> c(size, 0);
   // Warm up! Especially important for cuda.
-  WRAPPER[device](a.data(), c.data(), size, algo);
-  printf("Warm up done. Test start.\n");
+  printf("Test start.\n");
   float time_ms;
   time_point_t time = std::chrono::high_resolution_clock::now();
-  for (int i = 0; i < repeat; i++) {
+  for (int i = 0; i <= repeat; i++) { // One extra time, because #0 is warm up.
     WRAPPER[device](a.data(), c.data(), size, algo);
     time_ms = chrono_event_tick(time);
-    printf("[#%d] End to end latency: %.3f ms\n", i + 1, time_ms);
+    printf("[#%d] End to end latency: %.3f ms\n", i, time_ms);
   }
   printf("First error pos = %d\n", error_position(a.data(), c.data(), size));
   return 0;

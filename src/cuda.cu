@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
+#include <stdio.h>
 #include <vector>
 
 /* ***********************************
@@ -167,5 +168,6 @@ int cuda_wrapper(const int *arr, int *result, const int n, uint8_t type) {
   for (int i = 0; i < times.size(); i++) {
     printf("#%d: %.3f(ms)\n", i, times[i]);
   }
+  printf("[C] %.3f ms\n", times[2] + times[3]);
   return 0;
 }
