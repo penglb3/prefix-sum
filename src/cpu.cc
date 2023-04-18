@@ -8,6 +8,11 @@
 
 void scan(int *A, const int n) {
   for (int s = 1; s < n; s <<= 1) {
+#ifdef SEQUENTIAL_SCAN
+    for (int j = n - 1; j >= s; j--) {
+      A[j] += A[j - s];
+    }
+#else
 #ifndef SCAN_MULTITHREADING
     __m256i a_i, a_i_s;
     int i;
@@ -44,6 +49,7 @@ void scan(int *A, const int n) {
       A[i] += A[i - s];
     }
 #endif
+#endif
   }
 }
 
@@ -51,16 +57,15 @@ int num_omp_threads = 0;
 
 void sum_efficient(int *A, const int n) {
   int s;
-  //
   for (s = 1; s < n; s <<= 1) {
     // Memory access is not continuous, so no point in SIMD
-#pragma omp parallel for num_threads(num_omp_threads)
+#pragma omp parallel for num_threads(num_omp_threads) schedule(static)
     for (int i = 2 * s - 1; i < n; i += s * 2) {
       A[i] += A[i - s];
     }
   }
   for (s >>= 1; s >= 1; s >>= 1) {
-#pragma omp parallel for num_threads(num_omp_threads)
+#pragma omp parallel for num_threads(num_omp_threads) schedule(static)
     for (int i = 2 * s - 1; i < n - s; i += s * 2) {
       A[i + s] += A[i];
     }

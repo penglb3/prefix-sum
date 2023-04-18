@@ -2,14 +2,22 @@ import os
 import re
 from numpy import percentile
 
-REPEAT = 50
-DIR_TO_SAVE = 'results/'
-ALGOS = ['cpu-seq','cpu-scan','cpu-efficient','cpu-block','cuda-scan','cuda-efficient']
-X_OFFSET = [i * 0.1 for i in range(len(ALGOS))]
-N_THREADS = [8] # algos sensitive to this: cpu-block and cpu-efficient
-X_BASE = [1, 2, 3, 4]
-N_ELEMS = [1024 * 2 ** (5 * i) for i in X_BASE]
 EXEC = '"./build/Debug/prefix-sum.exe"'
+REPEAT = 50
+TEST_N_THREADS = False
+if TEST_N_THREADS:
+    DIR_TO_SAVE = 'results-threads/'
+    ALGOS = ['cpu-efficient','cpu-block']
+    X_OFFSET = [0.2, 0]
+    N_THREADS = [i for i in range(1, 12 + 1)] # algos sensitive to this: cpu-block and cpu-efficient
+    N_ELEMS = [1024 * 1024 * 32]
+else:
+    DIR_TO_SAVE = 'results/'
+    ALGOS = ['cpu-seq','cpu-scan','cpu-efficient','cpu-block','cuda-scan','cuda-efficient']
+    X_OFFSET = [i * 0.1 for i in range(len(ALGOS))]
+    N_THREADS = [12] # algos sensitive to this: cpu-block and cpu-efficient
+    X_BASE = [1, 2, 3, 4]
+    N_ELEMS = [1024 * 2 ** (5 * i) for i in X_BASE]
 
 def box(data):
     med, boxTop, boxBottom, whiskerTop, whiskerBottom = list(percentile(data, [50, 75, 25, 95, 5]))
@@ -64,10 +72,12 @@ for i_offset, algo_setting in enumerate(ALGOS):
             else:
                 with open(result_fname, 'r') as f:
                     data_comp, data_e2e = f.readlines()
-            x = X_BASE[i_base] + X_OFFSET[i_offset]
+            x = X_OFFSET[i_offset]
+            x += t if TEST_N_THREADS else X_BASE[i_base]
             comps.append(f"{x:.2f} " + data_comp)
             e2es.append(f"{x:.2f} " + data_e2e)
     # One plot file for each algorithm.
     with open(os.path.join(DIR_TO_SAVE, f"{algo_setting}.dat"), 'w') as f:
         f.write("".join(comps))
-        f.write("".join(e2es))
+        if not TEST_N_THREADS:
+            f.write("".join(e2es))
