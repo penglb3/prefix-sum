@@ -14,7 +14,7 @@ if TEST_N_THREADS:
 else:
     DIR_TO_SAVE = 'results/'
     ALGOS = ['cpu-seq','cpu-scan','cpu-efficient','cpu-block','cuda-scan','cuda-efficient']
-    X_OFFSET = [i * 0.1 for i in range(len(ALGOS))]
+    X_OFFSET = [i * 0.08 for i in range(len(ALGOS))]
     N_THREADS = [12] # algos sensitive to this: cpu-block and cpu-efficient
     X_BASE = [1, 2, 3, 4]
     N_ELEMS = [1024 * 2 ** (5 * i) for i in X_BASE]

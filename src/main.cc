@@ -75,7 +75,7 @@ void get_param(InputParser &parser, const char *opt, int &arg,
 
 int main(int argc, const char *argv[]) {
   InputParser parser(argc, argv);
-  int size = 1024 * 4, device = CPU, algo = SCAN, repeat = 1;
+  int size = 1024 * 4, device = CPU, algo = EFFICIENT, repeat = 1;
   get_param(parser, "-n", size);
   get_param(parser, "-r", repeat);
   get_param(parser, "-d", device, DEVICE_NAMES);

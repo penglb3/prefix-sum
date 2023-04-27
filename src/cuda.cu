@@ -58,11 +58,9 @@ public:
  * Section 2: Kernel functions
  ************************************* */
 
-inline __device__ int min_d(const int a, const int b) {
-  return a < b ? a : b;
-}
+inline __device__ int min_d(const int a, const int b) { return a < b ? a : b; }
 
-__global__ void scan_block(int *A, const int n) {
+__global__ void scan_slice(int *A, const int n) {
   int i = blockDim.x * blockIdx.x + threadIdx.x;
   if (i < n) {
     int tmp;
@@ -78,7 +76,7 @@ __global__ void scan_block(int *A, const int n) {
   }
 }
 
-__global__ void sum_block_efficient(int *A, const int n) {
+__global__ void efficient_slice(int *A, const int n) {
   int i = (blockDim.x * blockIdx.x + threadIdx.x) * 2 + 1;
   if (i < n) {
     int s;
@@ -122,21 +120,21 @@ __global__ void add_offsets(int *A, const uint32_t n, const int *offsets,
  * Section 3: CUDA Wrappers
  ************************************* */
 
-inline uint64_t div_up(const uint64_t n, const uint64_t block_size) {
-  return (n + block_size - 1) / block_size;
+inline uint64_t div_up(const uint64_t n, const uint64_t m) {
+  return (n + m - 1) / m;
 }
 
-const sum_func_t ALGOS[] = {scan_block, sum_block_efficient};
+const sum_func_t ALGOS[] = {scan_slice, efficient_slice};
 const int UNIT_BLOCK_P[] = {1, 2};
 
 int cuda_wrapper(const int *arr, int *result, const int n, uint8_t type) {
   const int block_size = 1024;
   const int p = UNIT_BLOCK_P[type];
-  auto sum_block = ALGOS[type];
-  int unit_size = block_size * p;
+  auto sum_slice = ALGOS[type];
+  int slice_size = block_size * p;
   int *arr_d, *offsets_d;
   uint64_t n_bytes = n * sizeof(int);
-  uint32_t n_block = div_up(n, unit_size);
+  uint32_t n_block = div_up(n, slice_size);
   std::vector<float> times;
   EventTimer timer;
   timer.tick(); // #0: Alloc memory on memory
@@ -148,22 +146,22 @@ int cuda_wrapper(const int *arr, int *result, const int n, uint8_t type) {
   }
   HANDLE_ERROR(cudaMemcpy(arr_d, arr, n_bytes, cudaMemcpyHostToDevice));
   times.push_back(timer.tick(DEV_CUDA)); // #2: First scan
-  // Sum up within each unit
-  sum_block<<<n_block, block_size>>>(arr_d, n);
-  // A section consists of <unit_size> units
-  uint64_t sec_size = unit_size;
+  // Sum up within each slice
+  sum_slice<<<n_block, block_size>>>(arr_d, n);
+  // A section consists of <slice_size> slices
+  uint64_t sec_size = slice_size;
   unsigned int n_sec = div_up(n, sec_size * block_size);
   times.push_back(timer.tick(DEV_CUDA)); // #3: section sums
   while (sec_size < n) { // Loop until the whole array become a single section
-    // Gather offsets of each unit into offsets_d
+    // Gather offsets of each slice into offsets_d
     gather_offsets<<<n_sec, block_size>>>(arr_d, n, offsets_d, sec_size);
     // sum up offsets within a section
-    sum_block<<<n_sec, block_size>>>(offsets_d, div_up(n, sec_size));
-    // For each unit, add corresponding offset. Then every section is done.
+    sum_slice<<<n_sec, block_size>>>(offsets_d, div_up(n, sec_size));
+    // For each slice, add corresponding offset. Then every section is done.
     n_block = div_up(n - sec_size, block_size);
     add_offsets<<<n_block, block_size>>>(arr_d, n, offsets_d, sec_size, p);
-    // An old section becomes a unit in a new section.
-    sec_size *= unit_size;
+    // An old section becomes a slice in a new section.
+    sec_size *= slice_size;
     n_sec = div_up(n, sec_size * block_size);
   }
   times.push_back(timer.tick()); // #4: Copy results back
